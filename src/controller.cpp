@@ -3,44 +3,38 @@
 //
 
 #include "controller.h"
-
 #include <algorithm>
 
 namespace
 {
-  constexpr double max = std::numeric_limits<double>::max();
+  constexpr double kMax = std::numeric_limits<double>::max();
 }
 
 Controller::Controller()
 {
-  // Initialize the CTE PID
-  auto Ts = 0.02;  // 20 ms
+  // Experimentally measured sample time
+  auto Ts = 0.1;  // 100 ms
 
+  // Setup CTE control
   // CTE model is derived from the kinetic bicycle model
-  auto V = 100 / 3.6; // Referent speed m/s, linearization point
-  auto L = 5;         // Vehicle length m (assumed)
-  auto k_cte = V * V / L;
-  auto tau_c_cte = 0.1;
+  auto V = 20 * 1.6 / 3.6;  // Referent speed m/s, linearization point
+  auto L = 5;               // Vehicle length m (assumed)
+  auto kr = 8;
+  auto k = V * V / L * kr;
+  auto tau_c = 0.31;
 
   double Kp_cte, Ti_cte, Td_cte;
-  SIMC_parameterization(Kp_cte, Ti_cte, Td_cte, tau_c_cte, k_cte);
+  SIMC_parameterization(Kp_cte, Ti_cte, Td_cte, tau_c, k);
+  pid_steering_.Init(Kp_cte, Ti_cte, Td_cte, Ts, 3, 0.43, -0.43);
 
-  pid_speed_.Init(Kp_cte, Ti_cte, Td_cte, Ts, 3, 10, 10);
-
-  // Initialize the speed PID, model is simple integrator (but what is the throttle?)
-  auto tau_c_spd = 0.3;
-  auto tau_1_spd = 0.05;
-  auto k_spd = 1;
-
-  double Kp_spd, Ti_spd, Td_spd;
-  SIMC_parameterization(Kp_spd, Ti_spd, Td_spd, tau_c_spd, k_spd, tau_1_spd);
-
-  pid_steering_.Init(Kp_spd, Ti_spd, Td_spd, Ts, 3, 1, -1);
+  // Setup speed control
+  double Kp_spd = 0.3617, Ti_spd = 1.7241, Td_spd = 0;
+  pid_speed_.Init(Kp_spd, Ti_spd, Td_spd, Ts, 3, 1, 0);
 }
 
 double Controller::RegulateSpeed(double reference, double input_speed)
 {
-  pid_speed_.Update(reference, input_speed);
+  pid_speed_.Update(reference - input_speed);
   return pid_speed_.GetOutput();
 }
 
@@ -56,7 +50,7 @@ void Controller::SIMC_parameterization(double &Kp,
 {
   auto tau_d = std::min(tau_1, 4 * tau_c);
   auto tau_i = std::min(tau_2, 4 * tau_c);
-  auto kc = (tau_1 == max ? 1 : tau_1) * (tau_2 == max ? 1 : tau_2) / (k * (tau_c + theta) * tau_d);
+  auto kc = (tau_1 == kMax ? 1 : tau_1) * (tau_2 == kMax ? 1 : tau_2) / (k * (tau_c + theta) * tau_d);
 
   Kp = kc * (tau_i + tau_d) / tau_i;
   Ti = tau_i + tau_d;

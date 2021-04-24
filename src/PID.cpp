@@ -6,7 +6,7 @@
  * TODO: Complete the PID class. You may add any additional desired functions.
  */
 
-PID::PID() : e_s {0,0}, deltaUd_s(0), u_s(0)
+PID::PID() : e_s{0, 0}, deltaUd_s(0), u_s(0)
 {}
 
 PID::~PID()
@@ -45,31 +45,22 @@ void PID::Init(double Kp_, double Ti_, double Td_, double Ts_, double alpha_,
 
 void PID::Update(double e)
 {
-  Update(0, -e);
-}
-
-void PID::Update(double r, double y)
-{
   /**
    * TODO: Update PID.
    */
-  // Derivative action is not applied to reference (r) in this Update method
-  // since this is usually the preferred way.
-  double e = r - y;
 
   // Calculating incremental PID components
   auto delta_up = Kp * (e - e_s[0]);
   auto delta_ui = Kp * Ts / Ti * e;
-  auto delta_ud = A1 * deltaUd_s + A2 * (-y - 2 * e_s[0] + e_s[1]);
+  auto delta_ud = A1 * deltaUd_s + A2 * (e - 2 * e_s[0] + e_s[1]);
 
   // Final increment value
   auto delta_u = delta_up + delta_ui + delta_ud;
 
   // Refresh states
-  e_s[0] = e, e_s[1] = e_s[0];
+  e_s[1] = e_s[0], e_s[0] = e;
   deltaUd_s = delta_ud;
-
-  Saturation(delta_u);
+  IntegrateWithSaturation(delta_u);
 }
 
 double PID::GetOutput()
@@ -81,7 +72,7 @@ double PID::GetOutput()
   return u_s;
 }
 
-void PID::Saturation(double delta_u)
+void PID::IntegrateWithSaturation(double delta_u)
 {
   u_s = u_s + delta_u;
 
@@ -89,8 +80,7 @@ void PID::Saturation(double delta_u)
   if (u_s >= sat_max)
   {
     u_s = sat_max;
-  }
-  else if(u_s <= sat_min)
+  } else if (u_s <= sat_min)
   {
     u_s = sat_min;
   }

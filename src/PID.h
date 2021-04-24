@@ -3,12 +3,13 @@
 
 #include <limits>
 
-class PID {
+class PID
+{
 
   static constexpr double kMax = std::numeric_limits<double>::max();
   static constexpr double kMin = std::numeric_limits<double>::min();
 
- public:
+public:
   /**
    * Constructor
    */
@@ -30,7 +31,6 @@ class PID {
    * @param cte The current cross track error
    */
   void Update(double e);
-  void Update(double r, double y);
 
   /**
    * Calculate the total PID error.
@@ -38,9 +38,9 @@ class PID {
    */
   double GetOutput();
 
- private:
+private:
 
-  void Saturation(double delta_u);
+  void IntegrateWithSaturation(double delta_u);
 
   // States
   double e_s[2];
@@ -49,7 +49,7 @@ class PID {
 
   /**
    * PID Coefficients
-   */ 
+   */
   double Kp;
   double Ti;
   double Td;
